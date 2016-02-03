@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	_ "github.com/genchilu/goWebPricate/memory"
+	"github.com/genchilu/goWebPricate/session"
 	"html/template"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +13,27 @@ import (
 type Page struct {
 	Title string
 	Body  []byte
+}
+
+var globalSessions *session.Manager
+
+// Then, initialize the session manager
+func init() {
+	globalSessions, _ = session.NewManager("memory", "gosessionid", 3600)
+	go globalSessions.GC()
+}
+
+func login(w http.ResponseWriter, r *http.Request) {
+	sess := globalSessions.SessionStart(w, r)
+	r.ParseForm()
+	if r.Method == "GET" {
+		t, _ := template.ParseFiles("login.gtpl")
+		w.Header().Set("Content-Type", "text/html")
+		t.Execute(w, sess.Get("username"))
+	} else {
+		sess.Set("username", r.Form["username"])
+		http.Redirect(w, r, "/", 302)
+	}
 }
 
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
@@ -86,5 +109,6 @@ func main() {
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
+	http.HandleFunc("/login", login)
 	http.ListenAndServe(":8080", nil)
 }
