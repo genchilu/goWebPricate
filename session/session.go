@@ -8,14 +8,13 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-	"time"
 )
 
 type Session interface {
-	Set(key, value interface{}) error //set session value
-	Get(key interface{}) interface{}  //get session value
-	Delete(key interface{}) error     //delete session value
-	SessionID() string                //back current sessionID
+	Set(key string, value interface{}) error //set session value
+	Get(key string) interface{}              //get session value
+	Delete(key string) error                 //delete session value
+	SessionID() string                       //back current sessionID
 }
 
 type Provider interface {
@@ -33,10 +32,11 @@ type Manager struct {
 }
 
 func (manager *Manager) GC() {
-	manager.lock.Lock()
-	defer manager.lock.Unlock()
-	manager.provider.SessionGC(manager.maxlifetime)
-	time.AfterFunc(time.Duration(manager.maxlifetime), func() { manager.GC() })
+	/**	manager.lock.Lock()
+		defer manager.lock.Unlock()
+		manager.provider.SessionGC(manager.maxlifetime)
+		time.AfterFunc(time.Duration(manager.maxlifetime), func() { manager.GC() })
+	**/
 }
 
 var provides = make(map[string]Provider)

@@ -6,7 +6,7 @@ import (
 	"github.com/genchilu/goWebPricate/session"
 	"html/template"
 	"net/http"
-	"reflect"
+	"strconv"
 )
 
 var globalSessions *session.Manager
@@ -14,11 +14,13 @@ var globalSessions *session.Manager
 // Then, initialize the session manager
 func init() {
 	globalSessions, _ = session.NewManager("memory", "gosessionid", 3600)
-	go globalSessions.GC()
+	//go globalSessions.GC()
+	fmt.Println("finish init main")
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
 	sess := globalSessions.SessionStart(w, r)
+	fmt.Println(sess)
 	r.ParseForm()
 	if r.Method == "GET" {
 		t, _ := template.ParseFiles("login.gtpl")
@@ -37,7 +39,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", 302)
 	} else {
 		user := sess.Get("username")
-		count := reflect.ValueOf(sess.Get("count")).Int()
+		countStr := fmt.Sprint(sess.Get("count"))
+		count, _ := strconv.Atoi(countStr)
 		sess.Set("count", count+1)
 		fmt.Fprintf(w, "hi, %s! You have visited this page %d times.", user, count)
 	}
