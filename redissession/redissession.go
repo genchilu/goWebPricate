@@ -1,4 +1,4 @@
-package redisSession
+package redissession
 
 import (
 	"container/list"
@@ -7,16 +7,15 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/genchilu/goWebPricate/session"
 	"sync"
-	"time"
 )
 
+var maxLifeTime int64 = 10
 var pder = &Provider{list: list.New()}
 var redisCon redis.Conn
 
 type SessionRedis struct {
-	Sid          string                 // unique session id
-	TimeAccessed time.Time              // last access time
-	Value        map[string]interface{} // session value stored inside
+	Sid   string                 // unique session id
+	Value map[string]interface{} // session value stored inside
 }
 
 func (sr *SessionRedis) Set(key string, value interface{}) error {
@@ -35,15 +34,9 @@ func (sr *SessionRedis) Get(key string) interface{} {
 	return nil
 }
 
-//func (sr *SessionRedis) Delete(key string) error {
-//delete(sr.Value, key)
-//pder.SessionUpdate(sr)
-//	return nil
-//}
-
 func (sr *SessionRedis) Delete(key string) error {
-	//delete(st.value, key)
-	//pder.SessionUpdate(st.sid)
+	delete(sr.Value, key)
+	pder.SessionUpdate(sr)
 	return nil
 }
 
@@ -81,35 +74,24 @@ func (pder *Provider) SessionDestroy(sid string) error {
 }
 
 func (pder *Provider) SessionGC(maxlifetime int64) {
-	/*
-		pder.lock.Lock()
-		defer pder.lock.Unlock()
-
-		for {
-			element := pder.list.Back()
-			if element == nil {
-				break
-			}
-			if (element.Value.(*SessionStore).timeAccessed.Unix() + maxlifetime) < time.Now().Unix() {
-				pder.list.Remove(element)
-				delete(pder.sessions, element.Value.(*SessionStore).sid)
-			} else {
-				break
-			}
-		}
-	*/
+	/*use EXPIRE cmd at redis for session gc*/
 }
 
 func (pder *Provider) SessionUpdate(session *SessionRedis) error {
 	pder.lock.Lock()
 	defer pder.lock.Unlock()
-	session.TimeAccessed = time.Now()
 	sesBytes, err := json.Marshal(session)
 	if err != nil {
 		return err
 	}
 	sesJson := string(sesBytes)
 	status, err := redisCon.Do("SET", session.Sid, sesJson)
+	if err != nil {
+		fmt.Println(status)
+		panic(err)
+	}
+	fmt.Printf("reset sid expire: %s\n", session.Sid)
+	status, err = redisCon.Do("EXPIRE", session.Sid, maxLifeTime)
 	if err != nil {
 		fmt.Println(status)
 		panic(err)

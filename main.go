@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	_ "github.com/genchilu/goWebPricate/memory"
+	//_ "github.com/genchilu/goWebPricate/memory"
+	_ "github.com/genchilu/goWebPricate/redissession"
 	"github.com/genchilu/goWebPricate/session"
 	"html/template"
 	"net/http"
@@ -13,14 +14,17 @@ var globalSessions *session.Manager
 
 // Then, initialize the session manager
 func init() {
-	globalSessions, _ = session.NewManager("memory", "gosessionid", 3600)
-	//go globalSessions.GC()
+	sessionType := "redis"
+	var maxLifeTime int64 = 10
+	globalSessions, _ = session.NewManager(sessionType, "gosessionid", maxLifeTime)
+	if sessionType == "memory" {
+		go globalSessions.GC()
+	}
 	fmt.Println("finish init main")
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
 	sess := globalSessions.SessionStart(w, r)
-	fmt.Println(sess)
 	r.ParseForm()
 	if r.Method == "GET" {
 		t, _ := template.ParseFiles("login.gtpl")

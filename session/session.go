@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 )
 
 type Session interface {
@@ -32,11 +33,10 @@ type Manager struct {
 }
 
 func (manager *Manager) GC() {
-	/**	manager.lock.Lock()
-		defer manager.lock.Unlock()
-		manager.provider.SessionGC(manager.maxlifetime)
-		time.AfterFunc(time.Duration(manager.maxlifetime), func() { manager.GC() })
-	**/
+	manager.lock.Lock()
+	defer manager.lock.Unlock()
+	manager.provider.SessionGC(manager.maxlifetime)
+	time.AfterFunc(time.Duration(manager.maxlifetime), func() { manager.GC() })
 }
 
 var provides = make(map[string]Provider)
@@ -82,6 +82,8 @@ func (manager *Manager) SessionStart(w http.ResponseWriter, r *http.Request) (se
 	} else {
 		sid, _ := url.QueryUnescape(cookie.Value)
 		session, _ = manager.provider.SessionRead(sid)
+		cookie.MaxAge = int(manager.maxlifetime)
+		http.SetCookie(w, cookie)
 	}
 	return session
 }
