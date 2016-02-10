@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	//_ "github.com/genchilu/goWebPricate/memory"
-	_ "github.com/genchilu/goWebPricate/redissession"
+	_ "github.com/genchilu/goWebPricate/memory"
+	//_ "github.com/genchilu/goWebPricate/redissession"
+	//"github.com/fvbock/endless"
 	"github.com/genchilu/goWebPricate/session"
 	"html/template"
 	"net/http"
+	"regexp"
 	"strconv"
 )
 
@@ -14,7 +16,7 @@ var globalSessions *session.Manager
 
 // Then, initialize the session manager
 func init() {
-	sessionType := "redis"
+	sessionType := "memory"
 	var maxLifeTime int64 = 10
 	globalSessions, _ = session.NewManager(sessionType, "gosessionid", maxLifeTime)
 	if sessionType == "memory" {
@@ -50,8 +52,22 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type myhandler struct{}
+
+var loginPath = regexp.MustCompile("^/(login)")
+
+func (handler myhandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	atLogin := loginPath.FindStringSubmatch(r.URL.Path)
+	if atLogin != nil {
+		login(w, r)
+	} else {
+		index(w, r)
+	}
+}
+
 func main() {
-	http.HandleFunc("/", index)
-	http.HandleFunc("/login", login)
-	http.ListenAndServe(":8080", nil)
+	//http.HandleFunc("/", index)
+	//http.HandleFunc("/login", login)
+	//endless.ListenAndServe(":8080", http.Handler)
+	http.ListenAndServe(":8080", myhandler{})
 }
