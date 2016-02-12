@@ -3,8 +3,9 @@ package main
 import (
 	"container/list"
 	"fmt"
+	"github.com/garyburd/redigo/redis"
 	"github.com/genchilu/goWebPricate/memory"
-	//_ "github.com/genchilu/goWebPricate/redissession"
+	"github.com/genchilu/goWebPricate/redissession"
 	//"github.com/fvbock/endless"
 	"github.com/genchilu/goWebPricate/session"
 	"html/template"
@@ -17,13 +18,22 @@ var globalSessions *session.Manager
 
 // Then, initialize the session manager
 func init() {
-	sessionType := "memory"
-	var maxLifeTime int64 = 10
-	if sessionType == "memory" {
-		memory.Pder.Sessions = make(map[string]*list.Element, 0)
-		session.Register("memory", memory.Pder)
-		fmt.Println("finish init memory")
+	sessionType := "redis"
+	var maxLifeTime int64 = 20
+	//init memory session
+	memory.Pder.Sessions = make(map[string]*list.Element, 0)
+	session.Register("memory", memory.Pder)
+	fmt.Println("finish init memory session")
+	//init redis session
+	redissession.MaxLifeTime = maxLifeTime
+	redissession.Pder.Sessions = make(map[string]*list.Element, 0)
+	var err error
+	redissession.RedisCon, err = redis.Dial("tcp", "192.168.99.100:6379")
+	if err != nil {
+		panic(err)
 	}
+	session.Register("redis", redissession.Pder)
+	fmt.Println("finish init redis session")
 	globalSessions, _ = session.NewManager(sessionType, "gosessionid", maxLifeTime)
 	if sessionType == "memory" {
 		go globalSessions.GC()
@@ -71,14 +81,11 @@ var faviconPath = regexp.MustCompile("^/favicon\\.ico")
 func (handler myhandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	atLogin := loginPath.FindStringSubmatch(r.URL.Path)
 	atFavicon := faviconPath.FindStringSubmatch(r.URL.Path)
-	fmt.Printf("in server http, path: %s\n", r.URL.Path)
 	if atLogin != nil {
-		fmt.Println("in login")
 		login(w, r)
 	} else if atFavicon != nil {
 		fmt.Println("no favicon ")
 	} else {
-		fmt.Println("in index")
 		index(w, r)
 	}
 }

@@ -9,9 +9,9 @@ import (
 	"sync"
 )
 
-var maxLifeTime int64 = 10
-var pder = &Provider{list: list.New()}
-var redisCon redis.Conn
+var MaxLifeTime int64 = 10
+var Pder = &Provider{list: list.New()}
+var RedisCon redis.Conn
 
 type SessionRedis struct {
 	Sid   string                 // unique session id
@@ -20,12 +20,12 @@ type SessionRedis struct {
 
 func (sr *SessionRedis) Set(key string, value interface{}) error {
 	sr.Value[key] = value
-	pder.SessionUpdate(sr)
+	Pder.SessionUpdate(sr)
 	return nil
 }
 
 func (sr *SessionRedis) Get(key string) interface{} {
-	pder.SessionUpdate(sr)
+	Pder.SessionUpdate(sr)
 	if v, ok := sr.Value[key]; ok {
 		return v
 	} else {
@@ -36,7 +36,7 @@ func (sr *SessionRedis) Get(key string) interface{} {
 
 func (sr *SessionRedis) Delete(key string) error {
 	delete(sr.Value, key)
-	pder.SessionUpdate(sr)
+	Pder.SessionUpdate(sr)
 	return nil
 }
 
@@ -46,7 +46,7 @@ func (sr *SessionRedis) SessionID() string {
 
 type Provider struct {
 	lock     sync.Mutex               // lock
-	sessions map[string]*list.Element // save in memory
+	Sessions map[string]*list.Element // save in memory
 	list     *list.List               // gc
 }
 
@@ -58,7 +58,7 @@ func (pder *Provider) SessionInit(sid string) (session.Session, error) {
 }
 
 func (pder *Provider) SessionRead(sid string) (session.Session, error) {
-	value, err := redis.String(redisCon.Do("GET", sid))
+	value, err := redis.String(RedisCon.Do("GET", sid))
 	if err != nil {
 		sess, err := pder.SessionInit(sid)
 		return sess, err
@@ -69,7 +69,7 @@ func (pder *Provider) SessionRead(sid string) (session.Session, error) {
 }
 
 func (pder *Provider) SessionDestroy(sid string) error {
-	redisCon.Do("DEL", sid)
+	RedisCon.Do("DEL", sid)
 	return nil
 }
 
@@ -85,28 +85,16 @@ func (pder *Provider) SessionUpdate(session *SessionRedis) error {
 		return err
 	}
 	sesJson := string(sesBytes)
-	status, err := redisCon.Do("SET", session.Sid, sesJson)
+	status, err := RedisCon.Do("SET", session.Sid, sesJson)
 	if err != nil {
 		fmt.Println(status)
 		panic(err)
 	}
 	fmt.Printf("reset sid expire: %s\n", session.Sid)
-	status, err = redisCon.Do("EXPIRE", session.Sid, maxLifeTime)
+	status, err = RedisCon.Do("EXPIRE", session.Sid, MaxLifeTime)
 	if err != nil {
 		fmt.Println(status)
 		panic(err)
 	}
 	return err
-}
-
-func init() {
-	pder.sessions = make(map[string]*list.Element, 0)
-	con, err := redis.Dial("tcp", "192.168.99.100:6379")
-	if err != nil {
-		panic(err)
-	}
-	redisCon = con
-	//defer redisCon.Close()
-	session.Register("redis", pder)
-	fmt.Println("finish init redis session")
 }
