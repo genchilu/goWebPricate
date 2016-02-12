@@ -1,8 +1,9 @@
 package main
 
 import (
+	"container/list"
 	"fmt"
-	_ "github.com/genchilu/goWebPricate/memory"
+	"github.com/genchilu/goWebPricate/memory"
 	//_ "github.com/genchilu/goWebPricate/redissession"
 	//"github.com/fvbock/endless"
 	"github.com/genchilu/goWebPricate/session"
@@ -18,6 +19,11 @@ var globalSessions *session.Manager
 func init() {
 	sessionType := "memory"
 	var maxLifeTime int64 = 10
+	if sessionType == "memory" {
+		memory.Pder.Sessions = make(map[string]*list.Element, 0)
+		session.Register("memory", memory.Pder)
+		fmt.Println("finish init memory")
+	}
 	globalSessions, _ = session.NewManager(sessionType, "gosessionid", maxLifeTime)
 	if sessionType == "memory" {
 		go globalSessions.GC()
