@@ -29,9 +29,14 @@ func login(w http.ResponseWriter, r *http.Request) {
 	sess := globalSessions.SessionStart(w, r)
 	r.ParseForm()
 	if r.Method == "GET" {
-		t, _ := template.ParseFiles("login.gtpl")
-		w.Header().Set("Content-Type", "text/html")
-		t.Execute(w, sess.Get("username"))
+		if sess.Get("username") != nil {
+			http.Redirect(w, r, "/", 302)
+		} else {
+			fmt.Println("render login page")
+			t, _ := template.ParseFiles("login.gtpl")
+			w.Header().Set("Content-Type", "text/html")
+			t.Execute(w, sess.Get("username"))
+		}
 	} else {
 		sess.Set("username", r.FormValue("username"))
 		sess.Set("count", 1)
@@ -55,12 +60,19 @@ func index(w http.ResponseWriter, r *http.Request) {
 type myhandler struct{}
 
 var loginPath = regexp.MustCompile("^/(login)")
+var faviconPath = regexp.MustCompile("^/favicon\\.ico")
 
 func (handler myhandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	atLogin := loginPath.FindStringSubmatch(r.URL.Path)
+	atFavicon := faviconPath.FindStringSubmatch(r.URL.Path)
+	fmt.Printf("in server http, path: %s\n", r.URL.Path)
 	if atLogin != nil {
+		fmt.Println("in login")
 		login(w, r)
+	} else if atFavicon != nil {
+		fmt.Println("no favicon ")
 	} else {
+		fmt.Println("in index")
 		index(w, r)
 	}
 }
