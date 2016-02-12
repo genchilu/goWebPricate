@@ -36,12 +36,14 @@ func init() {
 	redissession.MaxLifeTime = maxLifeTime
 	redissession.Pder.Sessions = make(map[string]*list.Element, 0)
 	var err error
-	redissession.RedisCon, err = redis.Dial("tcp", redisIpAndPort)
-	if err != nil {
-		panic(err)
+	if sessionType == "redis" {
+		redissession.RedisCon, err = redis.Dial("tcp", redisIpAndPort)
+		if err != nil {
+			panic(err)
+		}
+		session.Register("redis", redissession.Pder)
+		fmt.Println("finish init redis session")
 	}
-	session.Register("redis", redissession.Pder)
-	fmt.Println("finish init redis session")
 	globalSessions, _ = session.NewManager(sessionType, "gosessionid", maxLifeTime)
 	if sessionType == "memory" {
 		go globalSessions.GC()
