@@ -2,6 +2,7 @@ package main
 
 import (
 	"container/list"
+	"flag"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"github.com/genchilu/goWebPricate/memory"
@@ -18,8 +19,15 @@ var globalSessions *session.Manager
 
 // Then, initialize the session manager
 func init() {
-	sessionType := "redis"
-	var maxLifeTime int64 = 20
+	//parser arg
+	var sessionType string
+	var redisIpAndPort string
+	var maxLifeTime int64
+	flag.StringVar(&sessionType, "sessiontype", "memory", "session type (memory or redis)")
+	flag.StringVar(&redisIpAndPort, "redisinfo", "redis:6379", "ip and prot of redis")
+	flag.Int64Var(&maxLifeTime, "sessionlifetime", 10, "session life time in secend")
+	flag.Parse()
+	fmt.Printf("session type: %s\n", sessionType)
 	//init memory session
 	memory.Pder.Sessions = make(map[string]*list.Element, 0)
 	session.Register("memory", memory.Pder)
@@ -28,7 +36,7 @@ func init() {
 	redissession.MaxLifeTime = maxLifeTime
 	redissession.Pder.Sessions = make(map[string]*list.Element, 0)
 	var err error
-	redissession.RedisCon, err = redis.Dial("tcp", "192.168.99.100:6379")
+	redissession.RedisCon, err = redis.Dial("tcp", redisIpAndPort)
 	if err != nil {
 		panic(err)
 	}
