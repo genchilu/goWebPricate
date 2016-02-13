@@ -7,6 +7,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/genchilu/goWebPricate/memory"
 	"github.com/genchilu/goWebPricate/redissession"
+	"os"
 	//"github.com/fvbock/endless"
 	"github.com/genchilu/goWebPricate/session"
 	"html/template"
@@ -16,6 +17,7 @@ import (
 )
 
 var globalSessions *session.Manager
+var hostname string
 
 // Then, initialize the session manager
 func init() {
@@ -48,6 +50,7 @@ func init() {
 	if sessionType == "memory" {
 		go globalSessions.GC()
 	}
+	hostname, _ = os.Hostname()
 	fmt.Println("finish init main")
 }
 
@@ -79,7 +82,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 		countStr := fmt.Sprint(sess.Get("count"))
 		count, _ := strconv.Atoi(countStr)
 		sess.Set("count", count+1)
-		fmt.Fprintf(w, "hi, %s! You have visited this page %d times.", user, count)
+		fmt.Fprintf(w, "hi, %s! You have visited this page %d times.\n", user, count)
+		fmt.Fprintf(w, "you are at host: %s\n", hostname)
 	}
 }
 
