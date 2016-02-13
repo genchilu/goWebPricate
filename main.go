@@ -11,6 +11,7 @@ import (
 	//"github.com/fvbock/endless"
 	"github.com/genchilu/goWebPricate/session"
 	"html/template"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 
 var globalSessions *session.Manager
 var hostname string
+var addrs []net.Addr
 
 // Then, initialize the session manager
 func init() {
@@ -50,7 +52,18 @@ func init() {
 	if sessionType == "memory" {
 		go globalSessions.GC()
 	}
+	//get hostname & ip
 	hostname, _ = os.Hostname()
+	list, err := net.Interfaces()
+	if err != nil {
+		panic(err)
+	}
+	for _, iface := range list {
+		if iface.Name == "eth0" {
+			addrs, _ = iface.Addrs()
+			break
+		}
+	}
 	fmt.Println("finish init main")
 }
 
@@ -83,7 +96,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		count, _ := strconv.Atoi(countStr)
 		sess.Set("count", count+1)
 		fmt.Fprintf(w, "hi, %s! You have visited this page %d times.\n", user, count)
-		fmt.Fprintf(w, "you are at host: %s\n", hostname)
+		fmt.Fprintf(w, "you are at host: %s, eth0 ip : %v\n", hostname, addrs)
 	}
 }
 
